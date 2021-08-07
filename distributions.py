@@ -1,16 +1,10 @@
 import numpy as np
-from numba import jit
 
-class Stable:
-    sample_datapoints = 10**6
+class Distribution:
+    sample_datapoints = 10 ** 6
 
-    def __init__(self, alpha: float, beta: float, loc:float, scale:float):
-        self.alpha = alpha
-        self.beta = beta
-        self.scale = scale
-        self.loc = loc
-
-        self.x_width = 20 * scale
+    def __init__(self):
+        pass
 
     def sample(self, n: int):
         return self.ppf(np.random.uniform(size=n, low=0., high=1.))
@@ -34,7 +28,8 @@ class Stable:
             n = len(self._discrete_x_coords)
             f = np.fft.fftfreq(n, self._dx) * 2 * np.pi
             cf = self.characteristic_function(f)
-            self._discrete_pdf = (np.fft.fftshift(np.fft.ifft(cf)) / self._dx).real
+            # self._discrete_pdf = np.abs(np.fft.fftshift(np.fft.ifft(cf)) / self._dx)
+            self._discrete_pdf = (np.fft.fftshift(np.fft.ifft(cf)) / self._dx)
 
     def _ensure_discrete_cdf(self):
         self._ensure_discrete_pdf()
@@ -42,20 +37,29 @@ class Stable:
             self._discrete_cdf = np.cumsum(self._discrete_pdf * self._dx)
 
     def _interpolate_discrete_cdf(self, x: np.array):
-        return np.interp(x, self._discrete_x_coords, self._discrete_cdf)
+        return np.interp(x, self._discrete_x_coords, np.abs(self._discrete_cdf))
 
     def _interpolate_discrete_pdf(self, x: np.array):
-        return np.interp(x, self._discrete_x_coords, self._discrete_pdf)
+        return np.interp(x, self._discrete_x_coords, np.abs(self._discrete_pdf))
 
     def _interpolate_discrete_ppf(self, x: np.array):
-        return np.interp(x, self._discrete_cdf, self._discrete_x_coords)
+        return np.interp(x, np.abs(self._discrete_cdf), self._discrete_x_coords)
+
+class Stable(Distribution):
+    def __init__(self, alpha: float, beta: float, loc:float, scale:float):
+        self.alpha = alpha
+        self.beta = beta
+        self.scale = scale
+        self.loc = loc
+
+        self.x_width = 50 * scale
 
     def characteristic_function(self, f: np.array):
         return np.exp(
-            1j * f * self.loc - np.abs(self.scale * f) ** self.alpha * (1 - 1j * self.beta * np.sign(f) * self._phi(f))
+            1j * f * self.loc - np.abs(self.scale * f) ** self.alpha * (1 - 1j * self.beta * np.sign(f) * self.phi(f))
         )
 
-    def _phi(self, f):
+    def phi(self, f):
         if self.alpha == 1:
             return - np.log(np.abs(self.scale * f)) * 2 / np.pi
         else:
@@ -85,3 +89,13 @@ class Levy(Stable):
 
     def pdf(self, x: np.array):
         pass
+
+class Empirical(Distribution):
+    def __init__(self, data):
+        self.data = data
+        self.loc = np.median(self.data)
+        self.scale = np.quantile(data, .75) - np.quantile(data, .25)
+        self.x_width = 20 * self.scale
+
+    def characteristic_function(self, f: np.array):
+        return np.mean(np.exp(1j * np.array([self.data]).T * np.array([f])), axis=0)
