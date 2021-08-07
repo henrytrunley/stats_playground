@@ -158,3 +158,13 @@ class Empirical(CharacteristicFunctionBased):
 
     def characteristic_function(self, f: np.array):
         return np.mean(np.exp(1j * np.array([self.data]).T * np.array([f])), axis=0)
+
+class Pareto(Distribution):
+    def __init__(self, x_m, alpha, min_prob=10**-6):
+        self.x_m = x_m
+        self.alpha = alpha
+        max_x = x_m / min_prob**1/alpha
+        super().__init__(min_x=x_m, max_x=max_x)
+
+    def construct_discrete_pdf(self, x: np.array):
+        return (x >= self.x_m) * self.alpha * self.x_m**self.alpha / x**(self.alpha + 1)
