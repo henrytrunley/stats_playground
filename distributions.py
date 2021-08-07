@@ -1,10 +1,25 @@
 import numpy as np
 
 class Distribution:
-    sample_datapoints = 10 ** 6
+    """
+    Base class for all probability distributions to come.
 
-    def __init__(self):
-        pass
+    Records a numerical distribution after first use for linear interpolation to avoid time consuming calculations.
+
+    Subclasses of Distribution should define a self.construct_discrete_pdf method to be usable.
+
+    self.construct_discrete_pdf requirements:
+        Positional arguments:
+            x -- a 1d numpy array of coordinates to evaluate the PDF at
+        Outputs:
+            a numpy array the same shape as x containing the corresponding PDF values
+    """
+
+    sample_datapoints = 10**6
+
+    def __init__(self, min_x: float, max_x: float):
+        self.min_x = min_x
+        self.max_x = max_x
 
     def sample(self, n: int):
         return self.ppf(np.random.uniform(size=n, low=0., high=1.))
@@ -21,38 +36,75 @@ class Distribution:
         self._ensure_discrete_cdf()
         return self._interpolate_discrete_ppf(x)
 
+    def construct_discrete_pdf(self, x: np.array):
+        raise AttributeError('No user defined method "construct_discrete_pdf". See docstring for usage.')
+
     def _ensure_discrete_pdf(self):
         if not hasattr(self, '_discrete_pdf'):
-            self._discrete_x_coords = np.linspace(self.loc - self.x_width, self.loc + self.x_width, self.sample_datapoints)
+            self._discrete_x_coords = np.linspace(self.min_x, self.max_x, self.sample_datapoints)
             self._dx = self._discrete_x_coords[1] - self._discrete_x_coords[0]
-            n = len(self._discrete_x_coords)
-            f = np.fft.fftfreq(n, self._dx) * 2 * np.pi
-            cf = self.characteristic_function(f)
-            # self._discrete_pdf = np.abs(np.fft.fftshift(np.fft.ifft(cf)) / self._dx)
-            self._discrete_pdf = (np.fft.fftshift(np.fft.ifft(cf)) / self._dx)
+            self._discrete_pdf = self.construct_discrete_pdf(self._discrete_x_coords)
 
     def _ensure_discrete_cdf(self):
         self._ensure_discrete_pdf()
         if not hasattr(self, '_discrete_cdf'):
             self._discrete_cdf = np.cumsum(self._discrete_pdf * self._dx)
+            self._discrete_cdf /= np.max(self._discrete_cdf)
 
     def _interpolate_discrete_cdf(self, x: np.array):
-        return np.interp(x, self._discrete_x_coords, np.abs(self._discrete_cdf))
+        return np.interp(
+            x=x,
+            xp=self._discrete_x_coords,
+            fp=np.abs(self._discrete_cdf),
+            left=0.,
+            right=1.,
+        )
 
     def _interpolate_discrete_pdf(self, x: np.array):
-        return np.interp(x, self._discrete_x_coords, np.abs(self._discrete_pdf))
+        return np.interp(
+            x=x,
+            xp=self._discrete_x_coords,
+            fp=np.abs(self._discrete_pdf),
+            left=0.,
+            right=0.,
+        )
 
     def _interpolate_discrete_ppf(self, x: np.array):
-        return np.interp(x, np.abs(self._discrete_cdf), self._discrete_x_coords)
+        return np.interp(
+            x=x,
+            xp=np.abs(self._discrete_cdf),
+            fp=self._discrete_x_coords,
+            left=self._discrete_x_coords[0],
+            right=self._discrete_x_coords[-1],
+        )
 
-class Stable(Distribution):
+class CharacteristicFunctionBased(Distribution):
+    """
+    Intermediate class based off distribution that calculated the pdf from a user defined characteristic function.
+    """
+
+    def construct_discrete_pdf(self, x: np.array):
+        n = len(x)
+        dx = x[1] - x[0]
+        f = np.fft.fftfreq(n, dx) * 2 * np.pi
+        cf = self.characteristic_function(f)
+        # return np.abs(np.fft.fftshift(np.fft.ifft(cf)) / self._dx)
+        return np.fft.fftshift(np.fft.ifft(cf)) / dx
+
+    def characteristic_function(self, f: np.array):
+        raise AttributeError('No user defined method "characteristic_function". See docstring for usage.')
+
+
+class Stable(CharacteristicFunctionBased):
     def __init__(self, alpha: float, beta: float, loc:float, scale:float):
         self.alpha = alpha
         self.beta = beta
         self.scale = scale
         self.loc = loc
 
-        self.x_width = 50 * scale
+        x_width = 50 * scale
+
+        super().__init__(min_x=loc - x_width, max_x=loc + x_width)
 
     def characteristic_function(self, f: np.array):
         return np.exp(
@@ -67,11 +119,13 @@ class Stable(Distribution):
 
 
 class Cauchy(Stable):
-    def __init__(self, x0: float, scale: float):
-        super().__init__(1., 0., x0, scale)
+    def __init__(self, x0: float, gamma: float):
+        self.x0 = x0
+        self.gamma = gamma
+        super().__init__(1., 0., x0, gamma)
 
-    def pdf(self, x: np.array):
-        pass
+    def construct_discrete_pdf(self, x: np.array):
+        return 1 / (np.pi * self.gamma * (1 + ((x - self.x0) / self.gamma)**2))
 
 
 class Gaussian(Stable):
@@ -79,23 +133,28 @@ class Gaussian(Stable):
         super().__init__(2., 0., mu, sigma/np.sqrt(2))
         self.sigma = sigma
 
-    def pdf(self, x: np.array):
-        return np.exp(- ((x - self.loc) / (self.sigma))**2 / 2) / (np.sqrt(2*np.pi) * self.sigma)
+    def construct_discrete_pdf(self, x: np.array):
+        return np.exp(- ((x - self.loc) / self.sigma)**2 / 2) / (np.sqrt(2*np.pi) * self.sigma)
 
 
 class Levy(Stable):
     def __init__(self, mu: float, c: float):
+        self.mu = mu
+        self.c = c
         super().__init__(.5, 1., mu, c)
 
-    def pdf(self, x: np.array):
-        pass
+    def construct_discrete_pdf(self, x: np.array):
+        return np.sqrt(self.c / (2 * np.pi)) * np.exp(-self.c / (2 * x - self.mu)) / (x - self.mu)**(3/2)
 
-class Empirical(Distribution):
-    def __init__(self, data):
+class Empirical(CharacteristicFunctionBased):
+    def __init__(self, data: np.array):
         self.data = data
         self.loc = np.median(self.data)
         self.scale = np.quantile(data, .75) - np.quantile(data, .25)
-        self.x_width = 20 * self.scale
+
+        x_width = 50 * self.scale
+
+        super().__init__(min_x=self.loc - x_width, max_x=self.loc + x_width)
 
     def characteristic_function(self, f: np.array):
         return np.mean(np.exp(1j * np.array([self.data]).T * np.array([f])), axis=0)

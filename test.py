@@ -4,14 +4,13 @@ from distributions import *
 
 if __name__=="__main__":
     stable = Stable(2, 0, 0, 1/np.sqrt(2))
-    # stable.sample_datapoints = 10**3
     normal = Gaussian(0, 1)
 
-    plt.figure(figsize=(10, 10))
-    plt.hist(stable.sample(1000), bins=100)
-    plt.show()
+    # plt.figure(figsize=(10, 10))
+    # plt.hist(stable.sample(1000), bins=100)
+    # plt.show()
 
-    # x = np.linspace(-10, 10, 1000)
+    x = np.linspace(-10, 10, 10000)
     # cdf = stable.cdf(x)
     #
     # plt.figure(figsize=(10, 10))
@@ -22,14 +21,14 @@ if __name__=="__main__":
     # ppf = stable.ppf(x)
     # plt.plot(x, ppf, label='stable PPF')
 
-    # plt.figure(figsize=(10,10))
-    # pdf = stable.pdf(x)
-    # plt.plot(x, pdf, label='stable')
-    #
-    # pdf = normal.pdf(x)
-    # plt.plot(x, pdf, label='gaussian')
-    #
+    plt.figure(figsize=(10,10))
+    pdf = stable.pdf(x)
+    plt.plot(x, pdf, label='stable')
 
+    pdf = normal.pdf(x)
+    plt.plot(x, pdf, label='gaussian')
+
+    plt.show()
     # plt.xlim(-10, 10)
     # plt.legend()
     # plt.show()
