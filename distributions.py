@@ -160,7 +160,7 @@ class Empirical(CharacteristicFunctionBased):
         return np.mean(np.exp(1j * np.array([self.data]).T * np.array([f])), axis=0)
 
 class Pareto(Distribution):
-    def __init__(self, x_m, alpha, min_prob=10**-6):
+    def __init__(self, x_m: float, alpha: float, min_prob: float = 10**-6):
         self.x_m = x_m
         self.alpha = alpha
         max_x = x_m / min_prob**1/alpha
