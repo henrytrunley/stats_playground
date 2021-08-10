@@ -163,7 +163,7 @@ class Pareto(Distribution):
     def __init__(self, x_m: float, alpha: float, min_prob: float = 10**-6):
         self.x_m = x_m
         self.alpha = alpha
-        max_x = x_m / min_prob**1/alpha
+        max_x = x_m / min_prob**(1/alpha)
         super().__init__(min_x=x_m, max_x=max_x)
 
     def construct_discrete_pdf(self, x: np.array):
