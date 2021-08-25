@@ -15,7 +15,7 @@ class Distribution:
             a numpy array the same shape as x containing the corresponding PDF values
     """
 
-    sample_datapoints = 10**6
+    sample_datapoints = 10**7
 
     def __init__(self, min_x: float, max_x: float):
         self.min_x = min_x
