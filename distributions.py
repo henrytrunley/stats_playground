@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import gamma
 
 class Distribution:
     """
@@ -168,3 +169,16 @@ class Pareto(Distribution):
 
     def construct_discrete_pdf(self, x: np.array):
         return (x >= self.x_m) * self.alpha * self.x_m**self.alpha / x**(self.alpha + 1)
+
+class InverseGamma(Distribution):
+    def __init__(self, alpha: float, beta: float):
+        self.alpha = alpha
+        self.beta = beta
+        std = np.sqrt(beta**2 / ((alpha-1)**2 * (alpha-2)))
+        mean = beta / (alpha - 1)
+        min_x = 0
+        max_x = mean + 10 * std
+        super().__init__(min_x=min_x, max_x=max_x)
+
+    def construct_discrete_pdf(self, x: np.array):
+        return self.beta**self.alpha / gamma(alpha) * x**(-1 - self.alpha) * np.exp(self.beta / x)
