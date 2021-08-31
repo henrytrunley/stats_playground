@@ -29,7 +29,7 @@ if __name__=="__main__":
     log_percentile = np.log(np.linspace(len(data), 1, len(data)) / len(data))
 
     x = np.linspace(x_m, data.max(), 10000)
-    y = 1 - pareto.cdf(x)
+    y = pareto.sf(x)
     log_x = np.log(x)
     log_y = np.log(y)
 

@@ -25,17 +25,20 @@ class Distribution:
     def sample(self, n: int):
         return self.ppf(np.random.uniform(size=n, low=0., high=1.))
 
-    def cdf(self, x: np.array):
+    def cdf(self, x: np.array):  # cumulative distribution function
         self._ensure_discrete_cdf()
         return self._interpolate_discrete_cdf(x)
 
-    def pdf(self, x: np.array):
+    def pdf(self, x: np.array):  # probability density function
         self._ensure_discrete_pdf()
         return self._interpolate_discrete_pdf(x)
 
-    def ppf(self, x: np.array):
+    def ppf(self, x: np.array):  # percent point function (inverse cdf)
         self._ensure_discrete_cdf()
         return self._interpolate_discrete_ppf(x)
+
+    def sf(self, x: np.array):  # survival function
+        return 1 - cdf(x)
 
     def construct_discrete_pdf(self, x: np.array):
         raise AttributeError('No user defined method "construct_discrete_pdf". See docstring for usage.')
