@@ -38,7 +38,7 @@ class Distribution:
         return self._interpolate_discrete_ppf(x)
 
     def sf(self, x: np.array):  # survival function
-        return 1 - cdf(x)
+        return 1 - self.cdf(x)
 
     def construct_discrete_pdf(self, x: np.array):
         raise AttributeError('No user defined method "construct_discrete_pdf". See docstring for usage.')

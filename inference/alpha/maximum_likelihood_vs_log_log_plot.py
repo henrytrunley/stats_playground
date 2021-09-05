@@ -50,7 +50,7 @@ if __name__ == "__main__":
     max_alpha = min(ml_alphas.max(), log_sf_alphas.max())
     bins = np.linspace(min_alpha, max_alpha, int(np.sqrt(experiments)))
     plt.figure(figsize=(10,10))
-    plt.hist(ml_alphas, bins=bins, density=True, alpha=.5, log='max_likelihood')
+    plt.hist(ml_alphas, bins=bins, density=True, alpha=.5, label='max_likelihood')
     plt.hist(log_sf_alphas, bins=bins, density=True, alpha=.5, label='log_survival_function')
     plt.legend()
 
